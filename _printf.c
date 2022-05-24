@@ -1,47 +1,49 @@
 #include "main.h"
-#include <stdio.h>
-#include <stdarg.h>
 
 /**
- * _printf - function that prints anything
- * @format: string to print that also has conversion characters
- * @...: arguments to print.
- * Return: length of the string or -1 if error
+ * _printf - prints anything
+ * @format: the format string
+ *
+ * Return: number of bytes printed
  */
-
 int _printf(const char *format, ...)
 {
-	int i = 0, length = 0, special;
-	va_list arg;
-	int (*f)(va_list);
+	int sum = 0;
+	va_list ap;
+	char *p, *start;
+	params_t params = PARAMS_INIT;
 
-	va_start(arg, format);
-	special = special_cases(format, arg);
-	if (special == (-1))
+	va_start(ap, format);
+
+	if (!format || (format[0] == '%' && !format[1]))
 		return (-1);
-
-	while (format[i])
+	if (format[0] == '%' && format[1] == ' ' && !format[2])
+		return (-1);
+	for (p = (char *)format; *p; p++)
 	{
-		if (format[i] == '%')
+		init_params(&params, ap);
+		if (*p != '%')
 		{
-			f = get_format(&format[i]);
-			if (f != NULL)
-			{
-				length += f(arg);
-				i += 2;
-				continue;
-			}
-			else
-			{
-				if (format[i] == '%' && format[i + 1] == '\0')
-					return (-1);
-				length += _putchar(format[i]);
-			}
+			sum += _putchar(*p);
+			continue;
 		}
+		start = p;
+		p++;
+		while (get_flag(p, &params)) /* while char at p is flag char */
+		{
+			p++; /* next char */
+		}
+		p = get_width(p, &params, ap);
+		p = get_precision(p, &params, ap);
+		if (get_modifier(p, &params))
+			p++;
+		if (!get_specifier(p))
+			sum += print_from_to(start, p,
+				params.l_modifier || params.h_modifier ? p - 1 : 0);
 		else
-			length += _putchar(format[i]);
-		i++;
+			sum += get_print_func(p, ap, &params);
 	}
-	va_end(arg);
-	return (length);
+	_putchar(BUF_FLUSH);
+	va_end(ap);
+	return (sum);
 }
